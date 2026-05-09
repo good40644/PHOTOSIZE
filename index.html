@@ -2,48 +2,79 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<title>多尺寸縮圖預覽工具
-圖片可右鍵下載縮圖後的尺寸，GIF檔不行</title>
-
+<title>圖片預覽小工具</title>
 
 <style>
-
 body{
-    font-family:Arial;
+    margin:0;
+    font-family: Arial, "Microsoft JhengHei", sans-serif;
+    background:#f4f6f8;
+    color:#333;
+}
+
+.container{
+    max-width:1000px;
+    margin:40px auto;
     padding:20px;
 }
 
-#controls{
+h1{
+    text-align:center;
+}
+
+.card{
+    background:#fff;
+    border-radius:12px;
+    padding:20px;
+    box-shadow:0 5px 15px rgba(0,0,0,0.08);
     margin-bottom:20px;
 }
 
-.size-row{
-    margin-bottom:10px;
-}
-
-.size-row input{
-    width:70px;
-    padding:5px;
-}
-
 #dropZone{
-    border:2px dashed #aaa;
-    padding:15px;
-    margin-top:10px;
+    border:2px dashed #bbb;
+    border-radius:10px;
+    padding:30px;
     text-align:center;
-    color:#666;
+    background:#fafafa;
 }
 
-#dropZone.dragover{
-    border-color:#333;
-    background:#f5f5f5;
+#status{
+    text-align:center;
+    color:#2ecc71;
+    font-weight:bold;
+    display:none;
 }
 
+#sizes{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+
+.size-row{
+    display:flex;
+    gap:10px;
+    align-items:center;
+}
+
+input[type=number]{
+    width:80px;
+    padding:6px;
+}
+
+button{
+    padding:8px 14px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+    background:#4a90e2;
+    color:#fff;
+}
+
+/* 預覽 */
 #preview{
     display:flex;
     gap:30px;
-    align-items:flex-start;
-    margin-top:20px;
     flex-wrap:wrap;
 }
 
@@ -55,213 +86,181 @@ body{
 
 .column-title{
     font-weight:bold;
-    margin-bottom:10px;
+    text-align:center;
 }
 
 .thumb-box{
-    border:1px solid #ccc;
-    border-radius:5px;
     display:flex;
+    flex-direction:column;
     align-items:center;
-    justify-content:center;
-    overflow:hidden;
-    background:#fff;
 }
 
 .thumb-box img{
-    max-width:100%;
-    max-height:100%;
+    display:block;
+    object-fit:contain;
 }
-
-button{
-    padding:6px 10px;
-    cursor:pointer;
-}
-
 </style>
 </head>
 
 <body>
 
-<h1>多尺寸縮圖預覽工具</h1>
-<h2>圖片可右鍵下載縮圖後的尺寸，GIF檔不行</h2>
+<div class="container">
 
-<div id="controls">
+<h1>圖片預覽小工具</h1>
+
+<div class="card">
 
 <input type="file" id="imageInput" multiple>
+<div id="dropZone">拖曳圖片到這裡上傳</div>
+<div id="status">上傳成功 ✔</div>
 
-<div id="dropZone">
-👉 可拖曳圖片到這裡(可多圖)
 </div>
 
-<br>
+<div class="card">
 
 <div id="sizes">
-
-<div class="size-row">
-寬：<input type="number" class="widthInput" value="50">
-高：<input type="number" class="heightInput" value="50">
-</div>
 
 <div class="size-row">
 寬：<input type="number" class="widthInput" value="20">
 高：<input type="number" class="heightInput" value="35">
 </div>
 
+<div class="size-row">
+寬：<input type="number" class="widthInput" value="50">
+高：<input type="number" class="heightInput" value="50">
 </div>
 
-<br>
+</div>
 
-<button id="addSizeBtn">新增尺寸欄位</button>
-<button id="generateBtn">生成縮圖預覽</button>
+<button id="addSizeBtn">新增尺寸</button>
+<button id="generateBtn">生成縮圖</button>
 
 </div>
 
+<div class="card">
 <div id="preview"></div>
+</div>
+
+</div>
 
 <script>
 
 const imageInput = document.getElementById('imageInput');
-const preview = document.getElementById('preview');
-const generateBtn = document.getElementById('generateBtn');
-const addSizeBtn = document.getElementById('addSizeBtn');
-const sizesDiv = document.getElementById('sizes');
 const dropZone = document.getElementById('dropZone');
+const status = document.getElementById('status');
+const preview = document.getElementById('preview');
+const sizesDiv = document.getElementById('sizes');
 
 let currentFiles = [];
 
-// 點選上傳
-imageInput.addEventListener('change', function(){
-    currentFiles = this.files;
+function showSuccess(){
+    status.style.display = 'block';
+    setTimeout(()=> status.style.display='none',1500);
+}
+
+imageInput.addEventListener('change', e=>{
+    currentFiles = e.target.files;
+    if(currentFiles.length) showSuccess();
 });
 
-// 拖曳效果
-dropZone.addEventListener('dragover', function(e){
+dropZone.addEventListener('dragover', e=>{
     e.preventDefault();
-    dropZone.classList.add('dragover');
 });
 
-dropZone.addEventListener('dragleave', function(){
-    dropZone.classList.remove('dragover');
-});
-
-// 拖曳放入
-dropZone.addEventListener('drop', function(e){
+dropZone.addEventListener('drop', e=>{
     e.preventDefault();
-    dropZone.classList.remove('dragover');
-
     currentFiles = e.dataTransfer.files;
-
-    // 同步給 input（方便使用）
     imageInput.files = currentFiles;
+    if(currentFiles.length) showSuccess();
 });
 
-// 新增尺寸欄位
-addSizeBtn.addEventListener('click', function(){
-
-    const row = document.createElement('div');
-    row.className = 'size-row';
-
-    row.innerHTML = `
+document.getElementById('addSizeBtn').addEventListener('click', ()=>{
+    const div = document.createElement('div');
+    div.className='size-row';
+    div.innerHTML=`
         寬：<input type="number" class="widthInput" value="50">
         高：<input type="number" class="heightInput" value="50">
     `;
-
-    sizesDiv.appendChild(row);
+    sizesDiv.appendChild(div);
 });
 
-// 生成縮圖
-generateBtn.addEventListener('click', function(){
+document.getElementById('generateBtn').addEventListener('click', ()=>{
 
-    preview.innerHTML = '';
+    preview.innerHTML='';
 
-    const files = currentFiles;
+    const widths=document.querySelectorAll('.widthInput');
+    const heights=document.querySelectorAll('.heightInput');
 
-    if(!files || files.length === 0){
-        alert('請先選擇或拖曳圖片');
-        return;
-    }
+    widths.forEach((wInput,i)=>{
 
-    const widthInputs = document.querySelectorAll('.widthInput');
-    const heightInputs = document.querySelectorAll('.heightInput');
+        const w=parseInt(wInput.value);
+        const h=parseInt(heights[i].value);
 
-    widthInputs.forEach((wInput, index)=>{
+        const column=document.createElement('div');
+        column.className='column';
 
-        const targetW = parseInt(wInput.value);
-        const targetH = parseInt(heightInputs[index].value);
-
-        const column = document.createElement('div');
-        column.className = 'column';
-
-        const title = document.createElement('div');
-        title.className = 'column-title';
-        title.innerText = `${targetW} x ${targetH}`;
+        const title=document.createElement('div');
+        title.className='column-title';
+        title.innerText=`${w} x ${h}`;
 
         column.appendChild(title);
         preview.appendChild(column);
 
-        for(let file of files){
+        for(let file of currentFiles){
 
-            // GIF
-            if(file.type === 'image/gif'){
+            const reader=new FileReader();
 
-                const reader = new FileReader();
+            reader.onload=e=>{
 
-                reader.onload = function(e){
+                const box=document.createElement('div');
+                box.className='thumb-box';
 
-                    const box = createBox(targetW, targetH);
-                    const img = document.createElement('img');
+              
+                if(file.type==='image/gif'){
 
-                    img.src = e.target.result;
+                    const gif=document.createElement('img');
+                    gif.src=e.target.result;
 
-                    box.appendChild(img);
+                    gif.style.width=w+'px';
+                    gif.style.height=h+'px';
+                    gif.style.objectFit='contain';
+
+                    box.appendChild(gif);
                     column.appendChild(box);
+
+                    return;
                 }
 
-                reader.readAsDataURL(file);
-                continue;
-            }
+                /* PNG/JPG */
+                const img=new Image();
 
-            // JPG / PNG
-            const reader = new FileReader();
+                img.onload=()=>{
 
-            reader.onload = function(e){
+                    const canvas=document.createElement('canvas');
+                    canvas.width=w;
+                    canvas.height=h;
 
-                const img = new Image();
+                    const ctx=canvas.getContext('2d');
 
-                img.onload = function(){
+                    const ratio=Math.min(w/img.width,h/img.height);
 
-                    const canvas = document.createElement('canvas');
-                    canvas.width = targetW;
-                    canvas.height = targetH;
+                    const nw=img.width*ratio;
+                    const nh=img.height*ratio;
 
-                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img,(w-nw)/2,(h-nh)/2,nw,nh);
 
-                    const ratio = Math.min(
-                        targetW / img.width,
-                        targetH / img.height
-                    );
+                    const url=canvas.toDataURL('image/png');
 
-                    const w = img.width * ratio;
-                    const h = img.height * ratio;
-
-                    const x = (targetW - w) / 2;
-                    const y = (targetH - h) / 2;
-
-                    ctx.drawImage(img, x, y, w, h);
-
-                    const url = canvas.toDataURL('image/png');
-
-                    const box = createBox(targetW, targetH);
-                    const thumb = document.createElement('img');
-
-                    thumb.src = url;
+                    const thumb=document.createElement('img');
+                    thumb.src=url;
+                    thumb.style.width=w+'px';
+                    thumb.style.height=h+'px';
 
                     box.appendChild(thumb);
                     column.appendChild(box);
                 }
 
-                img.src = e.target.result;
+                img.src=e.target.result;
             }
 
             reader.readAsDataURL(file);
@@ -270,16 +269,13 @@ generateBtn.addEventListener('click', function(){
 
 });
 
-// 建立外框
-function createBox(w, h){
-    const box = document.createElement('div');
-    box.className = 'thumb-box';
-    box.style.width = w + 'px';
-    box.style.height = h + 'px';
-    return box;
-}
-
 </script>
 
+<div class="container">
+
+
+<h3>只能使用JPG/JPEG/PNG/GIF檔上傳</h3>
+<h3>可右鍵下載自訂尺寸之圖片(GIF下載後仍為原始尺寸，無法放大縮小)</h3>
+<h3>By 性愛機器</h3>
 </body>
 </html>
