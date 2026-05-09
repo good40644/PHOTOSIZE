@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>多尺寸縮圖比較工具</title>
+
+<style>
+
+body{
+    font-family:Arial;
+    padding:20px;
+}
+
+#controls{
+    margin-bottom:20px;
+}
+
+.size-row{
+    margin-bottom:10px;
+}
+
+.size-row input{
+    width:70px;
+    padding:5px;
+}
+
+#preview{
+    display:flex;
+    gap:30px;
+    align-items:flex-start;
+    margin-top:20px;
+}
+
+.column{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+
+.column-title{
+    font-weight:bold;
+    margin-bottom:10px;
+}
+
+.thumb-box{
+    border:1px solid #ccc;
+    border-radius:5px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    overflow:hidden;
+
+    background:#fff;
+}
+
+.thumb-box img{
+    max-width:100%;
+    max-height:100%;
+}
+
+button{
+    padding:8px 12px;
+    cursor:pointer;
+}
+
+</style>
+</head>
+
+<body>
+
+<h2>多尺寸縮圖比較工具</h2>
+
+<div id="controls">
+
+<input type="file" id="imageInput" multiple>
+
+<br><br>
+
+<div id="sizes">
+
+<div class="size-row">
+
+寬：
+<input type="number" class="widthInput" value="50">
+
+高：
+<input type="number" class="heightInput" value="50">
+
+</div>
+
+<div class="size-row">
+
+寬：
+<input type="number" class="widthInput" value="20">
+
+高：
+<input type="number" class="heightInput" value="35">
+
+</div>
+
+</div>
+
+<br>
+
+<button id="addSizeBtn">新增尺寸欄位</button>
+
+<button id="generateBtn">生成比較圖</button>
+
+</div>
+
+<div id="preview"></div>
+
+<script>
+
+const imageInput = document.getElementById('imageInput');
+
+const preview = document.getElementById('preview');
+
+const generateBtn = document.getElementById('generateBtn');
+
+const addSizeBtn = document.getElementById('addSizeBtn');
+
+const sizesDiv = document.getElementById('sizes');
+
+
+// 新增尺寸欄位
+addSizeBtn.addEventListener('click', function(){
+
+    const row = document.createElement('div');
+
+    row.className = 'size-row';
+
+    row.innerHTML = `
+        寬：
+        <input type="number" class="widthInput" value="50">
+
+        高：
+        <input type="number" class="heightInput" value="50">
+    `;
+
+    sizesDiv.appendChild(row);
+
+});
+
+
+// 生成縮圖
+generateBtn.addEventListener('click', function(){
+
+    preview.innerHTML = '';
+
+    const files = imageInput.files;
+
+    if(!files.length){
+
+        alert('請先選擇圖片');
+
+        return;
+    }
+
+    const widthInputs = document.querySelectorAll('.widthInput');
+
+    const heightInputs = document.querySelectorAll('.heightInput');
+
+    widthInputs.forEach((widthInput, index)=>{
+
+        const targetWidth = parseInt(widthInput.value);
+
+        const targetHeight = parseInt(
+            heightInputs[index].value
+        );
+
+        const column = document.createElement('div');
+
+        column.className = 'column';
+
+        const title = document.createElement('div');
+
+        title.className = 'column-title';
+
+        title.innerText =
+            targetWidth + ' x ' + targetHeight;
+
+        column.appendChild(title);
+
+        preview.appendChild(column);
+
+        for(let file of files){
+
+            // GIF
+            if(file.type === 'image/gif'){
+
+                const reader = new FileReader();
+
+                reader.onload = function(e){
+
+                    const box = createBox(
+                        targetWidth,
+                        targetHeight
+                    );
+
+                    const img = document.createElement('img');
+
+                    img.src = e.target.result;
+
+                    box.appendChild(img);
+
+                    column.appendChild(box);
+
+                }
+
+                reader.readAsDataURL(file);
+
+                continue;
+            }
+
+            // JPG PNG
+            const reader = new FileReader();
+
+            reader.onload = function(e){
+
+                const originalImg = new Image();
+
+                originalImg.onload = function(){
+
+                    const canvas =
+                        document.createElement('canvas');
+
+                    canvas.width = targetWidth;
+
+                    canvas.height = targetHeight;
+
+                    const ctx =
+                        canvas.getContext('2d');
+
+                    ctx.clearRect(
+                        0,
+                        0,
+                        targetWidth,
+                        targetHeight
+                    );
+
+                    const ratio = Math.min(
+                        targetWidth / originalImg.width,
+                        targetHeight / originalImg.height
+                    );
+
+                    const newWidth =
+                        originalImg.width * ratio;
+
+                    const newHeight =
+                        originalImg.height * ratio;
+
+                    const x =
+                        (targetWidth - newWidth) / 2;
+
+                    const y =
+                        (targetHeight - newHeight) / 2;
+
+                    ctx.drawImage(
+                        originalImg,
+                        x,
+                        y,
+                        newWidth,
+                        newHeight
+                    );
+
+                    const thumbnailUrl =
+                        canvas.toDataURL('image/png');
+
+                    const box = createBox(
+                        targetWidth,
+                        targetHeight
+                    );
+
+                    const thumbImg =
+                        document.createElement('img');
+
+                    thumbImg.src = thumbnailUrl;
+
+                    box.appendChild(thumbImg);
+
+                    column.appendChild(box);
+
+                }
+
+                originalImg.src = e.target.result;
+
+            }
+
+            reader.readAsDataURL(file);
+
+        }
+
+    });
+
+});
+
+
+function createBox(width, height){
+
+    const box = document.createElement('div');
+
+    box.className = 'thumb-box';
+
+    box.style.width = width + 'px';
+
+    box.style.height = height + 'px';
+
+    return box;
+
+}
+
+</script>
+
+</body>
+</html>
