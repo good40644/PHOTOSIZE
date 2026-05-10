@@ -390,7 +390,58 @@ button {
 
 .empty-state .big { font-size: 32px; margin-bottom: 8px; opacity: 0.3; }
 
-/* Notes */
+/* CSS Scale Preview */
+#cssPreview {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  min-height: 40px;
+}
+
+.css-thumb-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.css-thumb-outer {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  transition: border-color 0.2s;
+  background: rgba(255,107,53,0.03);
+}
+
+.css-thumb-outer:hover {
+  border-color: rgba(255,107,53,0.4);
+}
+
+.css-thumb-outer img {
+  display: block;
+  transform-origin: top left;
+  /* scale applied dynamically */
+}
+
+.css-dim-label {
+  font-size: 10px;
+  color: var(--muted);
+  font-family: 'Syne', sans-serif;
+}
+
+.css-column-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--accent2);
+  background: rgba(255,107,53,0.1);
+  padding: 4px 12px;
+  border-radius: 100px;
+}
+
+
 .notes {
   margin-top: 32px;
   padding: 20px 24px;
@@ -459,22 +510,22 @@ button {
       <div class="size-row">
         <div class="input-group">
           <label>W</label>
-          <input type="number" class="widthInput" value="20">
+          <input type="number" class="widthInput" value="50">
         </div>
         <div class="input-group">
           <label>H</label>
-          <input type="number" class="heightInput" value="35">
+          <input type="number" class="heightInput" value="50">
         </div>
         <button class="remove-btn" title="刪除">×</button>
       </div>
       <div class="size-row">
         <div class="input-group">
           <label>W</label>
-          <input type="number" class="widthInput" value="50">
+          <input type="number" class="widthInput" value="150">
         </div>
         <div class="input-group">
           <label>H</label>
-          <input type="number" class="heightInput" value="50">
+          <input type="number" class="heightInput" value="150">
         </div>
         <button class="remove-btn" title="刪除">×</button>
       </div>
@@ -487,7 +538,7 @@ button {
 
   <!-- Preview -->
   <div class="card">
-    <div class="card-label">03 — 預覽結果</div>
+    <div class="card-label">03 — 預覽結果（壓縮像素）</div>
     <div id="preview">
       <div class="empty-state">
         <div class="big">🖼</div>
@@ -496,10 +547,22 @@ button {
     </div>
   </div>
 
+  <!-- CSS Scale Preview -->
+  <div class="card">
+    <div class="card-label">04 — 預覽結果（不壓縮像素）</div>
+    <div id="cssPreview">
+      <div class="empty-state">
+        <div class="big">🔍</div>
+        上傳圖片並點擊「生成縮圖」後，CSS 縮放版本會顯示在這裡
+      </div>
+    </div>
+  </div>
+
   <div class="notes">
+<div class="card-label">05 — 備註</div>
     <span class="note-item">僅支援 JPG / JPEG / PNG / GIF 格式</span>
-    <span class="note-item">右鍵圖片可下載自訂尺寸之圖片</span>
-    <span class="note-item">GIF僅供預覽使用下載後仍為原始尺寸</span>
+    <span class="note-item">03之壓縮預覽圖可直接右鍵下載壓縮後的圖檔，GIF僅供預覽使用下載後仍為原始尺寸</span>
+  
   </div>
 
   <div class="by">By 性愛機器</div>
@@ -510,12 +573,13 @@ button {
 <div id="status">✦ 上傳成功</div>
 
 <script>
-const imageInput = document.getElementById('imageInput');
-const dropZone   = document.getElementById('dropZone');
-const status     = document.getElementById('status');
-const preview    = document.getElementById('preview');
-const sizesDiv   = document.getElementById('sizes');
-const fileList   = document.getElementById('fileList');
+const imageInput  = document.getElementById('imageInput');
+const dropZone    = document.getElementById('dropZone');
+const status      = document.getElementById('status');
+const preview     = document.getElementById('preview');
+const cssPreview  = document.getElementById('cssPreview');
+const sizesDiv    = document.getElementById('sizes');
+const fileList    = document.getElementById('fileList');
 
 let currentFiles = [];
 
@@ -582,9 +646,11 @@ document.getElementById('addSizeBtn').addEventListener('click', () => addSizeRow
 
 document.getElementById('generateBtn').addEventListener('click', () => {
   preview.innerHTML = '';
+  cssPreview.innerHTML = '';
 
   if (!currentFiles.length) {
     preview.innerHTML = '<div class="empty-state"><div class="big">⚠</div>請先上傳圖片</div>';
+    cssPreview.innerHTML = '<div class="empty-state"><div class="big">⚠</div>請先上傳圖片</div>';
     return;
   }
 
@@ -595,14 +661,23 @@ document.getElementById('generateBtn').addEventListener('click', () => {
     const w = parseInt(wInput.value);
     const h = parseInt(heights[i].value);
 
+    // ── Canvas (pixel-compressed) column ──
     const column = document.createElement('div');
     column.className = 'column';
-
     const title = document.createElement('div');
     title.className = 'column-title';
     title.textContent = `${w} × ${h}`;
     column.appendChild(title);
     preview.appendChild(column);
+
+    // ── CSS-scale column ──
+    const cssColumn = document.createElement('div');
+    cssColumn.className = 'column';
+    const cssTitle = document.createElement('div');
+    cssTitle.className = 'css-column-title';
+    cssTitle.textContent = `${w} × ${h}`;
+    cssColumn.appendChild(cssTitle);
+    cssPreview.appendChild(cssColumn);
 
     Array.from(currentFiles).forEach(file => {
       const reader = new FileReader();
@@ -615,6 +690,43 @@ document.getElementById('generateBtn').addEventListener('click', () => {
         label.className = 'dim-label';
         label.textContent = file.name.length > 16 ? file.name.slice(0, 14) + '…' : file.name;
 
+        // ── CSS-scale box (共用同一個 reader result) ──
+        const cssBox = document.createElement('div');
+        cssBox.className = 'css-thumb-box';
+
+        const cssLabel = document.createElement('div');
+        cssLabel.className = 'css-dim-label';
+        cssLabel.textContent = label.textContent;
+
+        const cssOuter = document.createElement('div');
+        cssOuter.className = 'css-thumb-outer';
+        cssOuter.style.width  = w + 'px';
+        cssOuter.style.height = h + 'px';
+
+        const cssImg = new Image();
+        cssImg.onload = () => {
+          const scaleX = w / cssImg.naturalWidth;
+          const scaleY = h / cssImg.naturalHeight;
+          const scale  = Math.min(scaleX, scaleY);
+          const scaledW = cssImg.naturalWidth  * scale;
+          const scaledH = cssImg.naturalHeight * scale;
+          // center inside the outer box
+          const offX = (w - scaledW) / 2;
+          const offY = (h - scaledH) / 2;
+          cssImg.style.width  = cssImg.naturalWidth  + 'px';
+          cssImg.style.height = cssImg.naturalHeight + 'px';
+          cssImg.style.transform = `translate(${offX}px, ${offY}px) scale(${scale})`;
+          cssImg.style.transformOrigin = 'top left';
+        };
+        cssImg.src = e.target.result;
+        cssImg.title = '右鍵另存原始圖片';
+
+        cssOuter.appendChild(cssImg);
+        cssBox.appendChild(cssOuter);
+        cssBox.appendChild(cssLabel);
+        cssColumn.appendChild(cssBox);
+
+        // ── Canvas (pixel-compressed) ──
         if (file.type === 'image/gif') {
           const gif = document.createElement('img');
           gif.src = e.target.result;
